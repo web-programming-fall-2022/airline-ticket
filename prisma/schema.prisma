@@ -1,0 +1,151 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model aircraft {
+  registration                     String          @id @db.VarChar(6)
+  layout_id                        Int
+  aircraft_layout                  aircraft_layout @relation(fields: [layout_id], references: [layout_id], onDelete: Cascade)
+  flight_flight_aircraftToaircraft flight[]        @relation("flight_aircraftToaircraft")
+}
+
+model aircraft_layout {
+  layout_id        Int           @id @default(autoincrement())
+  type_id          String        @db.VarChar
+  y_class_capacity Int
+  j_class_capacity Int
+  f_class_capacity Int
+  aircraft         aircraft[]
+  aircraft_type    aircraft_type @relation(fields: [type_id], references: [type_id], onDelete: Cascade)
+
+  @@unique([type_id, y_class_capacity, j_class_capacity, f_class_capacity])
+}
+
+model aircraft_type {
+  type_id         String            @id @db.VarChar
+  manufacturer    String            @db.VarChar
+  model           String            @db.VarChar
+  series          String            @db.VarChar
+  aircraft_layout aircraft_layout[]
+}
+
+model airport {
+  country_name                       String   @db.VarChar
+  city_name                          String   @db.VarChar
+  airport_name                       String   @db.VarChar
+  iata_code                          String   @id @db.VarChar(3)
+  city                               city     @relation(fields: [country_name, city_name], references: [country_name, city_name], onDelete: Cascade)
+  flight_flight_destinationToairport flight[] @relation("flight_destinationToairport")
+  flight_flight_originToairport      flight[] @relation("flight_originToairport")
+
+  @@index([country_name, city_name])
+}
+
+model city {
+  country_name  String    @db.VarChar
+  city_name     String    @db.VarChar
+  timezone_name String    @db.VarChar
+  airport       airport[]
+  country       country   @relation(fields: [country_name], references: [country_name], onUpdate: Restrict)
+
+  @@id([country_name, city_name])
+}
+
+model country {
+  country_name String @id @db.VarChar
+  city         city[]
+}
+
+model flight {
+  flight_serial                       Int                     @id @default(autoincrement())
+  flight_id                           String                  @db.VarChar
+  origin                              String                  @db.VarChar(3)
+  destination                         String                  @db.VarChar(3)
+  aircraft                            String                  @db.VarChar(6)
+  departure_utc                       DateTime                @db.Timestamp(6)
+  duration                            Unsupported("interval")
+  y_price                             Int
+  j_price                             Int
+  f_price                             Int
+  aircraft_flight_aircraftToaircraft  aircraft                @relation("flight_aircraftToaircraft", fields: [aircraft], references: [registration], onDelete: Cascade)
+  airport_flight_destinationToairport airport                 @relation("flight_destinationToairport", fields: [destination], references: [iata_code], onDelete: Cascade)
+  airport_flight_originToairport      airport                 @relation("flight_originToairport", fields: [origin], references: [iata_code], onDelete: Cascade)
+  purchase                            purchase[]
+
+  @@index([flight_id])
+  @@index([origin, destination, departure_utc])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model purchase {
+  purchase_id           Int           @id @default(autoincrement())
+  corresponding_user_id Int?
+  first_name            String?       @db.VarChar
+  last_name             String?       @db.VarChar
+  flight_serial         Int?
+  offer_price           Int?
+  offer_class           String?       @db.VarChar
+  offer_quantity        Int?
+  flight                flight?       @relation(fields: [flight_serial], references: [flight_serial], onDelete: Restrict)
+  transaction           transaction[]
+}
+
+model transaction {
+  transaction_id Int       @id @default(autoincrement())
+  purchase_id    Int?
+  payment_id     Int?
+  payment_amount Int?
+  payment_date   DateTime? @db.Timestamp(6)
+  payment_status String?   @db.VarChar
+  purchase       purchase? @relation(fields: [purchase_id], references: [purchase_id], onDelete: Restrict)
+}
+
+view origin_destination {
+  county  String? @db.VarChar
+  city    String? @db.VarChar
+  airport String? @db.VarChar
+  iata    String  @id @db.VarChar
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+view aircraft_view {
+  registration     String? @db.VarChar(6)
+  aircraft_type    String?
+  type_id          String? @db.VarChar
+  y_class_capacity Int?
+  j_class_capacity Int?
+  f_class_capacity Int?
+
+  @@ignore
+}
+
+/// The underlying view does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+view airport_timezone {
+  iata_code     String? @db.VarChar(3)
+  timezone_name String? @db.VarChar
+
+  @@ignore
+}
+
+view available_offers {
+  flight_id             String?                  @db.VarChar
+  flight_serial         Int                      @id
+  origin                String?                  @db.VarChar(3)
+  destination           String?                  @db.VarChar(3)
+  departure_local_time  DateTime?                @db.Timestamp(6)
+  arrival_local_time    DateTime?                @db.Timestamp(6)
+  duration              Unsupported("interval")?
+  y_price               Int?
+  j_price               Int?
+  f_price               Int?
+  y_class_free_capacity BigInt?
+  j_class_free_capacity BigInt?
+  f_class_free_capacity BigInt?
+  equipment             String?
+}
