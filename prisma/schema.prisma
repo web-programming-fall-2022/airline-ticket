@@ -99,7 +99,8 @@ model purchase {
 model transaction {
   transaction_id Int       @id @default(autoincrement())
   purchase_id    Int?
-  payment_id     Int?
+  payment_id     Int
+  receipt_id     Int?
   payment_amount Int?
   payment_date   DateTime? @db.Timestamp(6)
   payment_status String?   @db.VarChar
