@@ -49,12 +49,14 @@ router.post('/purchase', requireAuthentication, async function (req, res) {
     res.json({
       error: 'No such flight',
     }).status(404);
+    return
   }
 
   if (result[`${flight_class}_class_free_capacity`] < quantity) {
     res.json({
       error: 'Not enough seats',
     }).status(400);
+    return
   }
 
   const price = result[`${flight_class}_price`];
@@ -129,7 +131,6 @@ router.post('/update-transaction/:paymentId', requireAuthentication, async funct
       payment_status: req.body.status,
     }
   }).catch((e) => {
-    console.log(e);
     res.json({
       error: 'Error while updating transaction',
     }).status(500);
